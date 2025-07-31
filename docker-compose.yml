@@ -1,0 +1,125 @@
+x-logging:
+  &default-logging
+  options:
+    max-size: '12m'
+    max-file: '5'
+  driver: json-file
+
+services:
+  nginx:
+    build: nginx:alpine
+    restart: unless-stopped
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - admin_ui_build:/usr/share/nginx/html/admin:ro
+      - nginx_logs:/var/log/nginx
+    networks:
+      - internal_net
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - api
+      - links
+      
+  api:
+    image: bneibaruch/mdb:${API_VERSION}
+    restart: unless-stopped
+    volumes:
+      - ./api/config.toml:/app/config.toml
+    networks:
+      - internal_net
+    expose:
+      - "8080"
+    logging: *default-logging
+    environment:
+      MDB_URL: postgres://${MDB_USER}:${MDB_PASSWORD}@${MDB_HOST}:${MDB_PORT}/${MDB_DATABASE}?sslmode=disable
+      SERVER_ROLLBAR_TOKEN: ${ROLLBAR_TOKEN}
+    
+  links:
+    image: bneibaruch/mdb_links:${LINKS_VERSION}
+    restart: unless-stopped
+    networks:
+      - internal_net
+    expose:
+      - "8081"
+    logging: *default-logging
+    environment:
+      GIN_MODE: release
+      BASE_URL: http://app.mdb.bbdomain.org/links/
+      MDB_URL: postgres://${MDB_USER}:${MDB_PASSWORD}@{MDB_HOST}:${MDB_PORT}/${MDB_DATABASE}?sslmode=disable
+      FILER_URLS: "http://files.bbdomain.org/api/v1/get"
+      ROLLBAR_TOKEN: ${ROLLBAR_TOKEN}
+      ROLLBAR_ENVIRONMENT: internal
+      MDB_MAX_OPEN_CONNS: 10
+  
+  admin_ui:
+    image: bneibaruch/mdb_admin:${ADMIN_UI_VERSION}
+    volumes:
+      - admin_ui_build:/build_copy
+
+  # archive_content_pusher:
+  #   container_name: 'acp'
+
+  nats:
+    image: nats:2.11
+    restart: unless-stopped
+    volumes:
+      - nats_data:/storage
+    ports:
+      - "4222:4222"    # client connections
+    expose:
+      - "8222" # monitoring
+    networks:
+      - internal_net
+    command: ["--jetstream", "--store_dir", "/storage", "--user", "${NATS_USER}", "--pass", "${NATS_PASSWORD}", "--http_port", "8222"]
+
+  # grafana_agent:
+  #   image: grafana/agent:latest
+  #   restart: unless-stopped
+  #   command: run --server.http.listen-addr=0.0.0.0:12345 /etc/agent/config.river
+  #   ports:
+  #     - "12345:12345"
+  #   volumes:
+  #     - ./config/grafana.river:/etc/agent/config.river:ro
+  #     - /var/run/docker.sock:/var/run/docker.sock:ro
+  #     - nginx_logs:/nginx_logs:ro
+  #   environment:
+  #     AGENT_MODE: flow
+
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:latest
+    restart: unless-stopped
+    command:
+      - -nginx.scrape-uri=http://nginx:8079/nginx_status
+    networks:
+      - internal_net
+    ports:
+      - "9113:9113"
+
+  nats-exporter:
+    image: natsio/prometheus-nats-exporter:latest
+    restart: unless-stopped
+    command:
+      - "-accstatz"
+      - "-connz_detailed"
+      - "-healthz_js_enabled_only"
+      - "-varz"
+      - "-subz"
+      - "-jsz=all"
+      - "http://nats:8222"
+    ports:
+      - "9116:7777"
+    networks:
+      - internal_net
+
+networks:
+  internal_net:
+    driver: bridge
+
+volumes:
+  admin_ui_build:
+  nginx_logs:
+  nats_data:
+  mdb_data:
