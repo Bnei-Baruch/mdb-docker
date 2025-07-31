@@ -19,6 +19,8 @@ services:
     ports:
       - "80:80"
       - "443:443"
+    expose:
+      - "8079" # nginx status
     depends_on:
       - api
       - links
