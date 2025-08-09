@@ -1,0 +1,20 @@
+# MDB API cron jobs
+
+# Import storage catalog
+0 * * * * root docker compose -f <INSTALL_DIR>/docker-compose.yml exec -T api /bin/sh -c '/app/import_storage_docker.sh'
+
+# Import latest tweets from twitter
+*/10 * * * * root docker compose -f <INSTALL_DIR>/docker-compose.yml exec -T api /bin/sh -c '/app/import_twitter_docker.sh'
+
+# Import latest blog posts
+5 * * * * root docker compose -f <INSTALL_DIR>/docker-compose.yml exec -T api /bin/sh -c '/app/import_blogs_docker.sh'
+
+
+
+# Archive Content Pusher cron jobs
+
+# laitman.ru daily lesson (05:00 UTC => 07:00 IST 08:00 IDT)
+30 6 * * * root docker compose -f <INSTALL_DIR>/docker-compose.yml run -T acp
+
+# noon lesson (12:00 UTC => 14:00 IST 15:00 IDT)
+30 12 * * * root docker compose -f <INSTALL_DIR>/docker-compose.yml run -T acp

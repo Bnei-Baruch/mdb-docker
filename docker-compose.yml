@@ -7,7 +7,8 @@ x-logging:
 
 services:
   nginx:
-    build: nginx:alpine
+    image: nginx:alpine
+    container_name: nginx
     restart: unless-stopped
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
@@ -27,6 +28,7 @@ services:
       
   api:
     image: bneibaruch/mdb:${API_VERSION}
+    container_name: api
     restart: unless-stopped
     volumes:
       - ./api/config.toml:/app/config.toml
@@ -41,6 +43,7 @@ services:
     
   links:
     image: bneibaruch/mdb_links:${LINKS_VERSION}
+    container_name: links
     restart: unless-stopped
     networks:
       - internal_net
@@ -58,14 +61,21 @@ services:
   
   admin_ui:
     image: bneibaruch/mdb_admin:${ADMIN_UI_VERSION}
+    container_name: admin_ui
     volumes:
       - admin_ui_build:/build_copy
 
-  # archive_content_pusher:
-  #   container_name: 'acp'
+  archive_content_pusher:
+    image: bneibaruch/archive_content_pusher:${ARCHIVE_CONTENT_PUSHER_VERSION}
+    container_name: 'acp'
+    environment:
+      - LAITMAN_RU_URL=${LAITMAN_RU_URL}
+      - LAITMAN_RU_USERNAME=${LAITMAN_RU_USERNAME}
+      - LAITMAN_RU_PASSWORD=${LAITMAN_RU_PASSWORD}
 
   nats:
     image: nats:2.11
+    container_name: nats
     restart: unless-stopped
     volumes:
       - nats_data:/storage
@@ -77,21 +87,23 @@ services:
       - internal_net
     command: ["--jetstream", "--store_dir", "/storage", "--user", "${NATS_USER}", "--pass", "${NATS_PASSWORD}", "--http_port", "8222"]
 
-  # grafana_agent:
-  #   image: grafana/agent:latest
-  #   restart: unless-stopped
-  #   command: run --server.http.listen-addr=0.0.0.0:12345 /etc/agent/config.river
-  #   ports:
-  #     - "12345:12345"
-  #   volumes:
-  #     - ./config/grafana.river:/etc/agent/config.river:ro
-  #     - /var/run/docker.sock:/var/run/docker.sock:ro
-  #     - nginx_logs:/nginx_logs:ro
-  #   environment:
-  #     AGENT_MODE: flow
+  grafana_alloy:
+    image: grafana/alloy:latest
+    container_name: grafana_alloy
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./monitoring/alloy.config.hcl:/etc/alloy/config.alloy.hcl:ro
+      - nginx_logs:/nginx_logs:ro
+    command:
+      - run
+      - /etc/alloy/config.alloy.hcl
+    networks:
+      - internal_net
 
   nginx-exporter:
     image: nginx/nginx-prometheus-exporter:latest
+    container_name: nginx_exporter
     restart: unless-stopped
     command:
       - -nginx.scrape-uri=http://nginx:8079/nginx_status
@@ -102,7 +114,7 @@ services:
 
   nats-exporter:
     image: natsio/prometheus-nats-exporter:latest
-    restart: unless-stopped
+    container_name: nats_exporter
     command:
       - "-accstatz"
       - "-connz_detailed"
@@ -124,4 +136,4 @@ volumes:
   admin_ui_build:
   nginx_logs:
   nats_data:
-  mdb_data:
+

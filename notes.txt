@@ -4,6 +4,7 @@ mdb cron jobs
   - email sending (sendgrid vs shiray)
 archive content pusher
 copy/share admin ui to nginx
+
 healthcheck + dependencies
 monitoring stack
   grafana_agent / alloy
@@ -11,3 +12,11 @@ monitoring stack
   nginx stub status
   linux node exporter
 CI/CD - github actions
+
+
+switch nats.il.local to new vm
+* merge kolman's pusher
+* merge go bump pr
+
+coordinate switch with amnon and shiray
+FYI Alex and David
