@@ -12,7 +12,7 @@ Here should follow instructions on how to setup on a fresh machine.
 Probably something along the lines of:
 
 ```shell script
-curl -sL https://raw.githubusercontent.com/Bnei-Baruch/mdb-docker/main/host/install.sh | bash -s 
+curl -sL https://raw.githubusercontent.com/Bnei-Baruch/mdb-docker/main/host/install_rocky_9_3.sh | bash -s 
 
 cd mdb-docker
 vi .env
