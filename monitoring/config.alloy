@@ -74,8 +74,6 @@ loki.relabel "add_static_labels" {
   }
 }
 
-# --- Loki Sink (writer) ---
-
 loki.write "bbloki" {
   endpoint {
     url = "loki api push endpoint"
