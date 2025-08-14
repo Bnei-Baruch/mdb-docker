@@ -13,7 +13,7 @@ sleep 60
 # .env -> KMEDIA_MDB_VERSION = <env>
 # .env -> MDB_ADMIN_VERSION = <env>
 # docker-compose.yml -> mdb_links.BASE_URL = https://<env>-cdn.kabbalahmedia.info/
-# api/config.toml -> nats.client-id = "<env>-archive-backend-docker"
+# api/config.toml -> blogs credentials
 # set ./monitoring/alloy.config.hcl - loki credendtials
 
 # DB migrations tools
@@ -21,7 +21,7 @@ wget https://github.com/ko1nksm/shdotenv/releases/latest/download/shdotenv -O /u
 chmod +x /usr/local/bin/shdotenv
 wget https://github.com/elwinar/rambler/releases/download/v5.4.0/rambler-linux-amd64 -O /usr/local/bin/rambler
 chmod +x /usr/local/bin/rambler
-
+rambler --version
 
 # make sure everything is up and running correctly here
 
@@ -30,9 +30,8 @@ chmod +x /usr/local/bin/rambler
 sed "s|<INSTALL_DIR>|$(pwd)|g" host/mdb.cron.txt > /etc/cron.d/mdb
 
 # make sure crond.service is started and enabled
+systemctl --now enable crond
 systemctl status crond
-systemctl enable crond
-systemctl start crond
 
 
 # CI/CD reminder

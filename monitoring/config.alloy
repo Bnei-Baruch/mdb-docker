@@ -1,0 +1,88 @@
+logging {
+  level  = "error"
+  format = "json"
+}
+
+discovery.docker "linux" {
+  host = "unix:///var/run/docker.sock"
+}
+
+discovery.relabel "main" {
+  targets = discovery.docker.linux.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_network_ip"]
+    target_label  = "ip"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "compose_service"
+  }
+}
+
+loki.source.docker "default" {
+  host    = "unix:///var/run/docker.sock"
+  targets = discovery.relabel.main.output
+
+  labels = {
+    type = "docker",
+  }
+
+  relabel_rules = discovery.relabel.main.rules
+
+  forward_to = [loki.relabel.add_static_labels.receiver]
+}
+
+local.file_match "logs" {
+  path_targets = [
+    {
+      __path__ = "/nginx_logs/access-*.log",
+      source   = "nginx",
+      type     = "access",
+    },
+    {
+      __path__ = "/nginx_logs/error-*.log",
+      source   = "nginx",
+      type     = "error",
+    },
+  ]
+}
+
+loki.source.file "nginx" {
+  targets    = local.file_match.logs.targets
+  forward_to = [loki.relabel.add_static_labels.receiver]
+}
+
+loki.relabel "add_static_labels" {
+  forward_to = [loki.write.bbloki.receiver]
+
+  rule {
+    target_label = "namespace"
+    replacement  = "mdb"
+  }
+
+  rule {
+    target_label = "environment"
+    replacement  = "production"
+  }
+}
+
+# --- Loki Sink (writer) ---
+
+loki.write "bbloki" {
+  endpoint {
+    url = "loki api push endpoint"
+
+    basic_auth {
+      username = "..."
+      password = "..."
+    }
+  }
+}
